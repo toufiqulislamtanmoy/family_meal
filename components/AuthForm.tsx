@@ -1,153 +1,112 @@
 "use client";
 import React from "react";
-import { useRouter } from "next/navigation";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
+import Image from "next/image";
+import Link from "next/link";
 import { motion } from "framer-motion";
-import toast, { Toaster } from "react-hot-toast";
-
-import InputField from "./InputField";
-import Button from "./Button";
-import { registerUser, loginUser } from "../app/lib/api";
+import FormInput from "./FormInput";
 
 interface AuthFormProps {
-  type: "login" | "register";
+  title: string;
+  fields: {
+    label: string;
+    name: string;
+    type?: string;
+    placeholder?: string;
+  }[];
+  values: Record<string, string>;
+  onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  onSubmit: (e: React.FormEvent) => void;
+  buttonText: string;
+  imageSrc?: string;
 }
 
-// ✅ Validation Schemas
-const registerSchema = z.object({
-  name: z.string().min(2, "Name is required"),
-  email: z.string().email("Invalid email"),
-  password: z.string().min(6, "Password must be at least 6 characters"),
-});
-
-const loginSchema = z.object({
-  email: z.string().email("Invalid email"),
-  password: z.string().min(6, "Password must be at least 6 characters"),
-});
-
-type RegisterFormData = z.infer<typeof registerSchema>;
-type LoginFormData = z.infer<typeof loginSchema>;
-
-const AuthForm: React.FC<AuthFormProps> = ({ type }) => {
-  const router = useRouter();
-  const schema = type === "register" ? registerSchema : loginSchema;
-
-  const {
-    register,
-    handleSubmit,
-    formState: { errors, isSubmitting },
-  } = useForm<RegisterFormData | LoginFormData>({
-    resolver: zodResolver(schema),
-  });
-
-  const onSubmit = async (data: RegisterFormData | LoginFormData) => {
-    try {
-      if (type === "register") {
-        await registerUser(data);
-        toast.success("Registration successful!");
-        router.push("/login");
-      } else {
-        await loginUser(data);
-        toast.success("Login successful!");
-        router.push("/dashboard");
-      }
-    } catch (err) {
-      toast.error("Something went wrong, please try again.");
-    }
-  };
+const AuthForm: React.FC<AuthFormProps> = ({
+  title,
+  fields,
+  values,
+  onChange,
+  onSubmit,
+  buttonText,
+  imageSrc,
+}) => {
+  const isLogin = title.toLowerCase().includes("login");
 
   return (
-    <>
-      <Toaster position="top-right" />
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-blue-100 px-4">
       <motion.div
-        initial={{ opacity: 0, y: 40 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4 }}
-        className="max-w-sm mx-auto mt-20 bg-white shadow-lg rounded-2xl p-6"
+        initial={{ opacity: 0, scale: 0.9, y: 20 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        transition={{ duration: 0.5, ease: "easeOut" }}
+        className="bg-white shadow-xl rounded-2xl p-8 w-full max-w-sm flex flex-col items-center"
       >
-        <h2 className="text-2xl font-semibold mb-4 text-center capitalize">
-          {type === "login" ? "Login" : "Register"}
+        {imageSrc && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }}
+          >
+            <Image
+              src={imageSrc}
+              alt="App Logo"
+              width={60}
+              height={60}
+              className="mb-4 rounded-full shadow-sm"
+            />
+          </motion.div>
+        )}
+
+        <h2 className="text-3xl font-semibold text-blue-700 mb-6 tracking-tight">
+          {title}
         </h2>
 
-        <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-3">
-          {type === "register" && (
-            <div>
-              <InputField
-                label="Full Name"
-                type="text"
-                placeholder="Enter your name"
-                {...register("name" as const)}
-              />
-              {errors.name && (
-                <p className="text-red-500 text-sm mt-1">
-                  {errors.name.message as string}
-                </p>
-              )}
-            </div>
-          )}
-
-          <div>
-            <InputField
-              label="Email"
-              type="email"
-              placeholder="Enter your email"
-              {...register("email" as const)}
+        <form onSubmit={onSubmit} className="w-full space-y-4">
+          {fields.map((field) => (
+            <FormInput
+              key={field.name}
+              label={field.label}
+              name={field.name}
+              type={field.type}
+              placeholder={field.placeholder}
+              value={values[field.name] || ""}
+              onChange={onChange}
             />
-            {errors.email && (
-              <p className="text-red-500 text-sm mt-1">
-                {errors.email.message as string}
-              </p>
-            )}
-          </div>
+          ))}
 
-          <div>
-            <InputField
-              label="Password"
-              type="password"
-              placeholder="Enter your password"
-              {...register("password" as const)}
-            />
-            {errors.password && (
-              <p className="text-red-500 text-sm mt-1">
-                {errors.password.message as string}
-              </p>
-            )}
-          </div>
-
-          <Button
+          <motion.button
             type="submit"
-            label={
-              isSubmitting
-                ? "Please wait..."
-                : type === "login"
-                ? "Login"
-                : "Register"
-            }
-            loading={isSubmitting}
-          />
+            whileHover={{ scale: 1.03 }}
+            whileTap={{ scale: 0.97 }}
+            className="w-full bg-blue-600 text-white py-2 rounded-lg mt-2 hover:bg-blue-700 transition-all shadow-md hover:shadow-blue-300"
+          >
+            {buttonText}
+          </motion.button>
         </form>
 
-        <p className="text-sm text-center mt-4 text-gray-500">
-          {type === "login" ? (
+        <p className="text-sm text-gray-600 mt-6">
+          {isLogin ? (
             <>
-              Don’t have an account?{" "}
-              <a href="/register" className="text-blue-600 hover:underline">
-                Register
-              </a>
+              Don&apos;t have an account?{" "}
+              <Link
+                href="/register"
+                className="text-blue-600 font-medium hover:underline"
+              >
+                Sign up
+              </Link>
             </>
           ) : (
             <>
               Already have an account?{" "}
-              <a href="/login" className="text-blue-600 hover:underline">
+              <Link
+                href="/login"
+                className="text-blue-600 font-medium hover:underline"
+              >
                 Login
-              </a>
+              </Link>
             </>
           )}
         </p>
       </motion.div>
-    </>
+    </div>
   );
 };
 
